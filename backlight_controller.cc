@@ -57,12 +57,14 @@ BacklightController::BacklightController(BacklightInterface* backlight,
       plugged_state_(kPowerUnknown),
       system_brightness_(0),
       min_(0),
-      max_(-1) {}
+      max_(-1),
+      is_initialized_(false) {}
 
 bool BacklightController::Init() {
   int64 level;
   if (backlight_->GetBrightness(&level, &max_)) {
     ReadPrefs();
+    is_initialized_ = true;
     return true;
   }
   return false;
@@ -85,6 +87,8 @@ bool BacklightController::GetTargetBrightness(int64* level) {
 }
 
 void BacklightController::IncreaseBrightness() {
+  if (!is_initialized_)
+    return;
   if (ReadBrightness()) {
     // Give the user between 8 and 16 distinct brightness levels
     int64 offset = 1 + (max_ >> 4);
@@ -102,6 +106,8 @@ void BacklightController::IncreaseBrightness() {
 }
 
 void BacklightController::DecreaseBrightness() {
+  if (!is_initialized_)
+    return;
   if (ReadBrightness()) {
     // Give the user between 8 and 16 distinct brightness levels
     int64 offset = 1 + (max_ >> 4);
@@ -121,7 +127,7 @@ void BacklightController::DecreaseBrightness() {
 
 
 void BacklightController::SetPowerState(PowerState state) {
-  if (state == state_)
+  if (state == state_ || !is_initialized_)
     return;
   LOG(INFO) << PowerStateToString(state_) << " -> "
             << PowerStateToString(state);
@@ -148,7 +154,7 @@ void BacklightController::SetPowerState(PowerState state) {
 }
 
 void BacklightController::OnPlugEvent(bool is_plugged) {
-  if (brightness_offset_ && is_plugged == plugged_state_)
+  if ((brightness_offset_ && is_plugged == plugged_state_) || !is_initialized_)
     return;
   if (is_plugged) {
     brightness_offset_ = &plugged_brightness_offset_;
@@ -161,7 +167,8 @@ void BacklightController::OnPlugEvent(bool is_plugged) {
 }
 
 bool BacklightController::ReadBrightness() {
-  CHECK(max_ >= 0) << "Init() must be called";
+  if (!is_initialized_)
+    return false;
   CHECK(brightness_offset_) << "Plugged state must be initialized";
   int64 level;
   if (GetTargetBrightness(&level) && level != system_brightness_) {
@@ -178,6 +185,8 @@ bool BacklightController::ReadBrightness() {
 }
 
 int64 BacklightController::WriteBrightness() {
+  if (!is_initialized_)
+    return false;
   CHECK(brightness_offset_) << "Plugged state must be initialized";
   int64 old_brightness = system_brightness_;
   if (state_ == BACKLIGHT_ACTIVE_ON) {
@@ -213,6 +222,8 @@ void BacklightController::AdjustBrightnessLevelToAvoidZero() {
 }
 
 void BacklightController::SetAlsBrightnessLevel(int64 level) {
+  if (!is_initialized_)
+    return;
   int64 target_level = 0;
   CHECK(GetTargetBrightness(&target_level));
   // Do not use ALS to adjust the backlight brightness if the backlight is
@@ -246,6 +257,8 @@ void BacklightController::ReadPrefs() {
 }
 
 void BacklightController::WritePrefs() {
+  if (!is_initialized_)
+    return;
   bool store_plugged_brightness = false;
   bool store_unplugged_brightness = false;
   // Do not store brightness that falls below a particular threshold, so that
@@ -281,6 +294,8 @@ void BacklightController::WritePrefs() {
 }
 
 void BacklightController::SetBrightnessToZero() {
+  if (!is_initialized_)
+    return;
   system_brightness_ = 0;
   if (backlight_->SetBrightness(0))
     WritePrefs();
