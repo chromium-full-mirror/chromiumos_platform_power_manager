@@ -128,7 +128,7 @@ void BacklightController::IncreaseBrightness() {
     // outside of clamped brightness region.
     double absolute_brightness = als_brightness_level_ + *brightness_offset_;
     *brightness_offset_ += new_brightness - absolute_brightness;
-    WriteBrightness();
+    WriteBrightness(true);
   }
 }
 
@@ -161,7 +161,7 @@ void BacklightController::DecreaseBrightness() {
     // outside of clamped brightness region.
     double absolute_brightness = als_brightness_level_ + *brightness_offset_;
     *brightness_offset_ += new_brightness - absolute_brightness;
-    WriteBrightness();
+    WriteBrightness(true);
   }
 }
 
@@ -183,7 +183,7 @@ bool BacklightController::SetPowerState(PowerState new_state) {
     ReadBrightness();
   state_ = new_state;
 
-  bool changed_brightness = WriteBrightness();
+  bool changed_brightness = WriteBrightness(true);
 
   if (light_sensor_)
     light_sensor_->EnableOrDisableSensor(state_);
@@ -210,7 +210,7 @@ bool BacklightController::OnPlugEvent(bool is_plugged) {
     brightness_offset_ = &unplugged_brightness_offset_;
     plugged_state_ = kPowerDisconnected;
   }
-  return WriteBrightness();
+  return WriteBrightness(true);
 }
 
 void BacklightController::SetMinimumBrightness(int64 level) {
@@ -235,7 +235,8 @@ void BacklightController::SetAlsBrightnessLevel(int64 level) {
   if (diff < 0)
     diff = -diff;
   if (diff >= 5)
-    WriteBrightness();
+    WriteBrightness(false);  // ALS adjustment should not change brightness
+                             // offset.
 }
 
 double BacklightController::Clamp(double value) {
@@ -342,7 +343,7 @@ bool BacklightController::ReadBrightness() {
   return true;
 }
 
-bool BacklightController::WriteBrightness() {
+bool BacklightController::WriteBrightness(bool adjust_brightness_offset) {
   if (!is_initialized_)
     return false;
   CHECK(brightness_offset_ != NULL) << "Plugged state must be initialized";
@@ -353,7 +354,8 @@ bool BacklightController::WriteBrightness() {
     if (local_brightness_ == 0)
       local_brightness_ = 1;
     // Adjust offset in case brightness was changed.
-    *brightness_offset_ = local_brightness_ - als_brightness_level_;
+    if (adjust_brightness_offset)
+      *brightness_offset_ = local_brightness_ - als_brightness_level_;
   } else if (state_ == BACKLIGHT_DIM) {
     // When in dimmed state, set to dim level only if it results in a reduction
     // of system brightness.  Also, make sure idle brightness is not lower than
