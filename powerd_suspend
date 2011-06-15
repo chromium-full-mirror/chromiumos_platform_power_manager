@@ -53,9 +53,16 @@ else
     echo OnAC > $power_status_on_suspend
 fi
 
-# Disable USB-Persist to save 500ms
-# (by not waiting for USB devices to reset and resume)
-for i in /sys/bus/usb/devices/*/power/persist; do echo 0 > $i; done
+# Disable USB-Persist on USB Mass storage devices
+# to get a proper behaviour of the file manager when doing suspend/resume
+UMS_CLASS=08
+for i in /sys/bus/usb/devices/*/bInterfaceClass ; do
+    if [ -e "$i" ] &&  [ "$(cat $i)" = "$UMS_CLASS" ] ; then
+        # persist attribute of the parent device of this interface
+        persist_file=$(echo "$i" | cut -d: -f1)/power/persist
+        echo 0 > $persist_file
+    fi
+done
 
 # - deletes hwclock snapshot from previous resumes
 rm -f /tmp/hwclock-on-resume
