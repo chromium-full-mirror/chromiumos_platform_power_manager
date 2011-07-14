@@ -108,6 +108,9 @@ class BacklightController {
   double RawBrightnessToLocalBrightness(int64 raw_level);
   int64 LocalBrightnessToRawBrightness(double local_level);
 
+  // Returns whether the user has manually turned backlight down to zero.
+  bool IsBacklightActiveOff();
+
   void ReadPrefs();
   void WritePrefs();
 

@@ -312,6 +312,10 @@ int64 BacklightController::LocalBrightnessToRawBrightness(double local_level) {
   return lround(local_level * max_ / max_percent_);
 }
 
+bool BacklightController::IsBacklightActiveOff() {
+  return state_ == BACKLIGHT_ACTIVE_OFF;
+}
+
 void BacklightController::ReadPrefs() {
   CHECK(prefs_->GetDouble(kPluggedBrightnessOffset,
                           &plugged_brightness_offset_));
