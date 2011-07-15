@@ -97,6 +97,9 @@ class BacklightController {
 
   void SetMinimumBrightness(int64 level);
 
+  // Returns whether the user has manually turned backlight down to zero.
+  bool IsBacklightActiveOff();
+
  private:
   // Clamp |value| to fit between 0 and 100.
   double Clamp(double value);
@@ -107,9 +110,6 @@ class BacklightController {
   // Converts between [0, 100] and [0, |max_|] brightness scales.
   double RawBrightnessToLocalBrightness(int64 raw_level);
   int64 LocalBrightnessToRawBrightness(double local_level);
-
-  // Returns whether the user has manually turned backlight down to zero.
-  bool IsBacklightActiveOff();
 
   void ReadPrefs();
   void WritePrefs();
