@@ -34,12 +34,15 @@ extern const char kBacklightPattern[];
 
 // Interface names.
 extern const char kRootPowerManagerInterface[];
+extern const char kRootPowerManagerServiceName[];
 
 // powerd -> powerm constants.
 extern const char kRestartSignal[];
 extern const char kRequestCleanShutdown[];
 extern const char kSuspendSignal[];
 extern const char kShutdownSignal[];
+extern const char kExternalBacklightGetMethod[];
+extern const char kExternalBacklightSetMethod[];
 
 // powerm -> powerd constants.
 extern const char kLidClosed[];
@@ -48,6 +51,7 @@ extern const char kPowerButtonDown[];
 extern const char kPowerButtonUp[];
 extern const char kLockButtonDown[];
 extern const char kLockButtonUp[];
+extern const char kExternalBacklightUpdate[];
 
 // Broadcast signals.
 extern const char kPowerStateChanged[];
