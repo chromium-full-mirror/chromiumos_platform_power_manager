@@ -46,6 +46,8 @@ extern const char kLidClosed[];
 extern const char kLidOpened[];
 extern const char kPowerButtonDown[];
 extern const char kPowerButtonUp[];
+extern const char kLockButtonDown[];
+extern const char kLockButtonUp[];
 
 // Broadcast signals.
 extern const char kPowerStateChanged[];

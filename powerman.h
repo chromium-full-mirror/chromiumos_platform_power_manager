@@ -34,7 +34,7 @@ class PowerManDaemon {
 
   enum LidState {
     LID_STATE_CLOSED,
-    LID_STATE_OPENED
+    LID_STATE_OPENED,
   };
 
   inline LidState GetLidState(int value) {
@@ -42,15 +42,17 @@ class PowerManDaemon {
     return value == 0 ? LID_STATE_OPENED : LID_STATE_CLOSED;
   }
 
-  enum PowerButtonState {
-    POWER_BUTTON_DOWN,
-    POWER_BUTTON_UP
+  enum ButtonState {
+    BUTTON_UP = 0,
+    BUTTON_DOWN,
+    BUTTON_REPEAT,
   };
 
-  inline PowerButtonState GetPowerButtonState(int value) {
-    // value == 0 is button up. value == 1 is button down.
+  inline ButtonState GetButtonState(int value) {
+    // value == 0 is button up.
+    // value == 1 is button down.
     // value == 2 is key repeat.
-    return value > 0 ? POWER_BUTTON_DOWN : POWER_BUTTON_UP;
+    return static_cast<ButtonState>(value);
   }
 
   // UMA metrics parameters.
@@ -130,7 +132,8 @@ class PowerManDaemon {
   PowerPrefs* prefs_;
   LidState lidstate_;
   MetricsLibraryInterface* metrics_lib_;
-  int power_button_state_;
+  ButtonState power_button_state_;
+  ButtonState lock_button_state_;
   int64 retry_suspend_ms_;
   int64 retry_suspend_attempts_;
   int retry_suspend_count_;
