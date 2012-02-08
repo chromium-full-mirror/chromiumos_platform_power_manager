@@ -117,7 +117,7 @@ class BacklightController {
   bool SetPowerState(PowerState state);
 
   // Mark the computer as plugged or unplugged, and adjust the brightness
-  // appropriately.  Returns true if the brightness was changed and false
+  // appropriately.  Returns true if the brightness was set and false
   // otherwise.
   bool OnPlugEvent(bool is_plugged);
 
@@ -158,15 +158,12 @@ class BacklightController {
   void ReadPrefs();
   void WritePrefs();
 
-  // Determine whether backlight controller has been initialized.
-  bool IsInitialized();
-
   // Applies previously-configured brightness to the backlight and updates
   // |target_percent_|.  In the active and already-dimmed states, the new
   // brightness is the sum of |als_offset_percent_| and
   // |*current_offset_percent_|.
   //
-  // Returns true if the brightness was changed and false otherwise.
+  // Returns true if the brightness was set and false otherwise.
   // If |adjust_brightness_offset| is true, |*current_offset_percent_| is
   // updated (it can change due to clamping of the target brightness).
   bool WriteBrightness(bool adjust_brightness_offset,
