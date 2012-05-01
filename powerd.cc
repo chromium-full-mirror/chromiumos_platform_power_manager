@@ -443,7 +443,9 @@ void Daemon::SetIdleState(int64 idle_time_ms) {
       backlight_controller_->SetPowerState(BACKLIGHT_IDLE_OFF);
   } else if (idle_time_ms >= dim_ms_ &&
              !state_control_->IsStateDisabled(kIdleDimDisabled)) {
+#ifndef IS_DESKTOP
     backlight_controller_->SetPowerState(BACKLIGHT_DIM);
+#endif
   } else if (backlight_controller_->state() != BACKLIGHT_ACTIVE) {
     if (backlight_controller_->SetPowerState(BACKLIGHT_ACTIVE)) {
       if (backlight_controller_->state() == BACKLIGHT_SUSPENDED) {
@@ -522,7 +524,11 @@ void Daemon::OnIdleEvent(bool is_idle, int64 idle_time_ms) {
     if (video_is_playing)
       SetIdleOffset(idle_time_ms - video_time_ms, kIdleNormal);
   }
+#ifdef IS_DESKTOP
+  if (is_idle && backlight_controller_->state() == BACKLIGHT_ACTIVE &&
+#else
   if (is_idle && backlight_controller_->state() == BACKLIGHT_DIM &&
+#endif
       !util::OOBECompleted()) {
     LOG(INFO) << "OOBE not complete. Delaying screenoff until done.";
     SetIdleOffset(idle_time_ms, kIdleScreenOff);

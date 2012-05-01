@@ -235,6 +235,25 @@ bool BacklightController::SetPowerState(PowerState new_state) {
 
   state_ = new_state;
 
+  LOG(INFO) << PowerStateToString(old_state) << " -> "
+            << PowerStateToString(new_state);
+
+#ifdef IS_DESKTOP
+  // On desktops, do not do automated transitions on state changes.  Just turn
+  // the monitor on/off.
+  if (!monitor_reconfigure_)
+    return true;
+  if (state_ == BACKLIGHT_IDLE_OFF) {
+    monitor_reconfigure_->SetScreenOff();
+  } else if (
+      state_ == BACKLIGHT_ACTIVE &&
+      (old_state == BACKLIGHT_IDLE_OFF ||
+       (old_state == BACKLIGHT_SUSPENDED && suspended_through_idle_off_))) {
+    monitor_reconfigure_->SetScreenOn();
+  }
+  return true;
+#endif
+
   TransitionStyle style = TRANSITION_GRADUAL;
   // Save the active backlight level if transitioning away from it.
   // Restore the saved value if returning to active state.
@@ -293,8 +312,6 @@ bool BacklightController::SetPowerState(PowerState new_state) {
     light_sensor_->EnableOrDisableSensor(state_);
   als_temporal_state_ = ALS_HYST_IMMEDIATE;
 
-  LOG(INFO) << PowerStateToString(old_state) << " -> "
-            << PowerStateToString(new_state);
   return true;
 }
 
@@ -474,6 +491,11 @@ bool BacklightController::WriteBrightness(bool adjust_brightness_offset,
                                           TransitionStyle style) {
   if (!is_initialized_)
     return false;
+
+#ifdef IS_DESKTOP
+  if (cause == BRIGHTNESS_CHANGE_AUTOMATED)
+    return false;
+#endif
 
   if (cause == BRIGHTNESS_CHANGE_USER_INITIATED)
     user_adjustment_count_++;
