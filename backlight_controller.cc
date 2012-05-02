@@ -132,6 +132,11 @@ bool BacklightController::Init() {
   }
 
   ReadPrefs();
+#ifdef IS_DESKTOP
+  target_level_ = std::max(min_visible_level_, target_level_);
+  plugged_offset_percent_ = LevelToPercent(target_level_);
+  unplugged_offset_percent_ = LevelToPercent(target_level_);
+#endif // defined (IS_DESKTOP)
   target_percent_ = LevelToPercent(target_level_);
 
   if (max_level_ == min_visible_level_ || kMaxBrightnessSteps == 1) {
@@ -319,6 +324,13 @@ bool BacklightController::OnPlugEvent(bool is_plugged) {
   if ((is_plugged ? kPowerConnected : kPowerDisconnected) == plugged_state_ ||
       !is_initialized_)
     return false;
+
+#ifdef IS_DESKTOP
+  current_offset_percent_ = &plugged_offset_percent_;
+  plugged_state_ = kPowerConnected;
+  return false;
+#endif // defined (IS_DESKTOP)
+
   bool is_first_time = (plugged_state_ == kPowerUnknown);
   if (is_plugged) {
     current_offset_percent_ = &plugged_offset_percent_;
@@ -445,8 +457,12 @@ int64 BacklightController::PercentToLevel(double percent) {
 
 void BacklightController::OnBacklightDeviceChanged() {
   LOG(INFO) << "Backlight device changed; reinitializing controller";
+#ifdef IS_DESKTOP
+  Init();
+#else
   if (Init())
     WriteBrightness(true, BRIGHTNESS_CHANGE_AUTOMATED, TRANSITION_GRADUAL);
+#endif // defined (IS_DESKTOP)
 }
 
 double BacklightController::ClampPercentToVisibleRange(double percent) {
@@ -464,6 +480,7 @@ void BacklightController::ReadPrefs() {
   CHECK_GT(min_visible_level_, 0);
   min_visible_level_ = std::min(min_visible_level_, max_level_);
 
+#ifndef IS_DESKTOP
   CHECK(prefs_->GetDouble(kPluggedBrightnessOffset, &plugged_offset_percent_));
   CHECK(prefs_->GetDouble(kUnpluggedBrightnessOffset,
                           &unplugged_offset_percent_));
@@ -475,6 +492,7 @@ void BacklightController::ReadPrefs() {
   double min_percent = LevelToPercent(min_visible_level_);
   plugged_offset_percent_ = std::max(min_percent, plugged_offset_percent_);
   unplugged_offset_percent_ = std::max(min_percent, unplugged_offset_percent_);
+#endif // !defined (IS_DESKTOP)
 }
 
 void BacklightController::WritePrefs() {

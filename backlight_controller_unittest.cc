@@ -89,17 +89,22 @@ class BacklightControllerTest : public ::testing::Test {
     prefs_.SetDouble(kUnpluggedBrightnessOffset, kUnpluggedBrightnessPercent);
     prefs_.SetInt64(kMinVisibleBacklightLevel, 1);
     CHECK(controller_.Init());
+    initial_target_percent_ = controller_.target_percent();
   }
 
  protected:
   ::testing::StrictMock<MockBacklight> backlight_;
   PowerPrefs prefs_;
   BacklightController controller_;
+  double initial_target_percent_;
 };
 
 TEST_F(BacklightControllerTest, IncreaseBrightness) {
   ASSERT_TRUE(controller_.SetPowerState(BACKLIGHT_ACTIVE));
+  double old_percent;
+#ifndef IS_DESKTOP
   ASSERT_TRUE(controller_.OnPlugEvent(false));
+
 #ifdef HAS_ALS
   EXPECT_DOUBLE_EQ(controller_.LevelToPercent(kDefaultBrightnessLevel),
                    controller_.target_percent());
@@ -107,11 +112,14 @@ TEST_F(BacklightControllerTest, IncreaseBrightness) {
   EXPECT_DOUBLE_EQ(kUnpluggedBrightnessPercent, controller_.target_percent());
 #endif // defined(HAS_ALS)
 
-  double old_percent = controller_.target_percent();
+  old_percent = controller_.target_percent();
   controller_.IncreaseBrightness(BRIGHTNESS_CHANGE_AUTOMATED);
   // Check that the first step increases the brightness; within the loop
   // will just ensure that the brightness never decreases.
   EXPECT_GT(controller_.target_percent(), old_percent);
+#else
+  EXPECT_DOUBLE_EQ(initial_target_percent_, controller_.target_percent());
+#endif // !defined (IS_DESKTOP)
 
   for (int i = 0; i < kStepsToHitLimit; ++i) {
     old_percent = controller_.target_percent();
@@ -124,7 +132,10 @@ TEST_F(BacklightControllerTest, IncreaseBrightness) {
 
 TEST_F(BacklightControllerTest, DecreaseBrightness) {
   ASSERT_TRUE(controller_.SetPowerState(BACKLIGHT_ACTIVE));
+  double old_percent;
+#ifndef IS_DESKTOP
   ASSERT_TRUE(controller_.OnPlugEvent(true));
+
 #ifdef HAS_ALS
   EXPECT_DOUBLE_EQ(controller_.LevelToPercent(kDefaultBrightnessLevel),
                    controller_.target_percent());
@@ -132,11 +143,14 @@ TEST_F(BacklightControllerTest, DecreaseBrightness) {
   EXPECT_DOUBLE_EQ(kPluggedBrightnessPercent, controller_.target_percent());
 #endif // defined(HAS_ALS)
 
-  double old_percent = controller_.target_percent();
+  old_percent = controller_.target_percent();
   controller_.DecreaseBrightness(true, BRIGHTNESS_CHANGE_AUTOMATED);
   // Check that the first step decreases the brightness; within the loop
   // will just ensure that the brightness never increases.
   EXPECT_LT(controller_.target_percent(), old_percent);
+#else
+  EXPECT_DOUBLE_EQ(initial_target_percent_, controller_.target_percent());
+#endif // !defined (IS_DESKTOP)
 
   for (int i = 0; i < kStepsToHitLimit; ++i) {
     old_percent = controller_.target_percent();
@@ -150,13 +164,19 @@ TEST_F(BacklightControllerTest, DecreaseBrightness) {
 
 TEST_F(BacklightControllerTest, DecreaseBrightnessDisallowOff) {
   ASSERT_TRUE(controller_.SetPowerState(BACKLIGHT_ACTIVE));
+#ifndef IS_DESKTOP
   ASSERT_TRUE(controller_.OnPlugEvent(true));
+
 #ifdef HAS_ALS
   EXPECT_DOUBLE_EQ(controller_.LevelToPercent(kDefaultBrightnessLevel),
                    controller_.target_percent());
 #else
   EXPECT_DOUBLE_EQ(kPluggedBrightnessPercent, controller_.target_percent());
 #endif // defined(HAS_ALS)
+
+#else
+  EXPECT_DOUBLE_EQ(initial_target_percent_, controller_.target_percent());
+#endif // !defined (IS_DESKTOP)
 
   for (int i = 0; i < kStepsToHitLimit; ++i)
     controller_.DecreaseBrightness(false, BRIGHTNESS_CHANGE_USER_INITIATED);
@@ -167,7 +187,9 @@ TEST_F(BacklightControllerTest, DecreaseBrightnessDisallowOff) {
 
 TEST_F(BacklightControllerTest, DecreaseBrightnessDisallowOffAuto) {
   ASSERT_TRUE(controller_.SetPowerState(BACKLIGHT_ACTIVE));
+#ifndef IS_DESKTOP
   ASSERT_TRUE(controller_.OnPlugEvent(true));
+#endif // !defined (IS_DESKTOP)
 
   for (int i = 0; i < kStepsToHitLimit; ++i)
     controller_.DecreaseBrightness(false, BRIGHTNESS_CHANGE_AUTOMATED);
@@ -185,12 +207,15 @@ TEST_F(BacklightControllerTest, DecreaseBrightnessDisallowOffAuto) {
 TEST_F(BacklightControllerTest, NotifyObserver) {
   // Set an initial state.
   ASSERT_TRUE(controller_.SetPowerState(BACKLIGHT_ACTIVE));
+#ifndef IS_DESKTOP
   ASSERT_TRUE(controller_.OnPlugEvent(false));
   controller_.SetAlsBrightnessOffsetPercent(16);
+#endif // !defined (IS_DESKTOP)
 
   MockObserver observer;
   controller_.set_observer(&observer);
 
+#ifndef IS_DESKTOP
   // Increase the brightness and check that the observer is notified.
   observer.Clear();
   controller_.IncreaseBrightness(BRIGHTNESS_CHANGE_AUTOMATED);
@@ -198,6 +223,7 @@ TEST_F(BacklightControllerTest, NotifyObserver) {
   EXPECT_DOUBLE_EQ(controller_.target_percent(),
                    observer.changes()[0].first);
   EXPECT_EQ(BRIGHTNESS_CHANGE_AUTOMATED, observer.changes()[0].second);
+#endif // !defined (IS_DESKTOP)
 
   // Decrease the brightness.
   observer.Clear();
@@ -207,6 +233,7 @@ TEST_F(BacklightControllerTest, NotifyObserver) {
                    observer.changes()[0].first);
   EXPECT_EQ(BRIGHTNESS_CHANGE_USER_INITIATED, observer.changes()[0].second);
 
+#ifndef IS_DESKTOP
   // Send enough ambient light sensor samples to trigger a brightness change.
   observer.Clear();
   double old_percent = controller_.target_percent();
@@ -224,7 +251,6 @@ TEST_F(BacklightControllerTest, NotifyObserver) {
   EXPECT_DOUBLE_EQ(controller_.target_percent(), observer.changes()[0].first);
   EXPECT_EQ(BRIGHTNESS_CHANGE_AUTOMATED, observer.changes()[0].second);
 
-#ifndef IS_DESKTOP
   // Dim the backlight.
   observer.Clear();
   ASSERT_TRUE(controller_.SetPowerState(BACKLIGHT_DIM));
@@ -240,7 +266,9 @@ TEST_F(BacklightControllerTest, KeepBacklightOnAfterAutomatedChange) {
   // Set the ALS offset to 100% and then manually lower the brightness as far as
   // we can.
   ASSERT_TRUE(controller_.SetPowerState(BACKLIGHT_ACTIVE));
+#ifndef IS_DESKTOP
   ASSERT_TRUE(controller_.OnPlugEvent(true));
+#endif // !defined (IS_DESKTOP)
   for (int i = 0; i < kAlsSamplesToTriggerAdjustment; ++i)
     controller_.SetAlsBrightnessOffsetPercent(100.0);
   for (int i = 0; i < kStepsToHitLimit; ++i)
@@ -258,7 +286,9 @@ TEST_F(BacklightControllerTest, MinBrightnessLevel) {
   prefs_.SetInt64(kMinVisibleBacklightLevel, kMinLevel);
   ASSERT_TRUE(controller_.Init());
   ASSERT_TRUE(controller_.SetPowerState(BACKLIGHT_ACTIVE));
+#ifndef IS_DESKTOP
   ASSERT_TRUE(controller_.OnPlugEvent(true));
+#endif // !defined (IS_DESKTOP)
 
   const double kMinPercent = controller_.LevelToPercent(kMinLevel);
 
@@ -313,7 +343,9 @@ TEST_F(BacklightControllerTest, MinBrightnessLevelMatchesMax) {
   controller_.SetAlsBrightnessOffsetPercent(0.0);
 #endif
   ASSERT_TRUE(controller_.SetPowerState(BACKLIGHT_ACTIVE));
+#ifndef IS_DESKTOP
   ASSERT_TRUE(controller_.OnPlugEvent(true));
+#endif // !defined (IS_DESKTOP)
   EXPECT_DOUBLE_EQ(100.0, controller_.target_percent());
 
   // Decrease the brightness with allow_off=false.
@@ -333,15 +365,19 @@ TEST_F(BacklightControllerTest, SuspendBrightnessLevel) {
   controller_.SetAlsBrightnessOffsetPercent(0.0);
 #endif
   ASSERT_TRUE(controller_.SetPowerState(BACKLIGHT_ACTIVE));
+#ifndef IS_DESKTOP
   ASSERT_TRUE(controller_.OnPlugEvent(true));
   EXPECT_DOUBLE_EQ(kPluggedBrightnessPercent, controller_.target_percent());
+#endif // !defined (IS_DESKTOP)
 
   // Test suspend and resume.
   ASSERT_TRUE(controller_.SetPowerState(BACKLIGHT_SUSPENDED));
   ASSERT_TRUE(controller_.SetPowerState(BACKLIGHT_ACTIVE));
+#ifdef IS_DESKTOP
+  EXPECT_DOUBLE_EQ(initial_target_percent_, controller_.target_percent());
+#else
   EXPECT_DOUBLE_EQ(kPluggedBrightnessPercent, controller_.target_percent());
 
-#ifndef IS_DESKTOP
   // This test is not done on desktops because the brightness does not get
   // adjusted by SetPowerState() when idling.
   // Test idling into suspend state.
@@ -353,14 +389,17 @@ TEST_F(BacklightControllerTest, SuspendBrightnessLevel) {
   // Test resume.
   ASSERT_TRUE(controller_.SetPowerState(BACKLIGHT_ACTIVE));
   EXPECT_DOUBLE_EQ(kPluggedBrightnessPercent, controller_.target_percent());
-#endif // !defined(IS_DESKTOP)
+#endif // defined(IS_DESKTOP)
 }
 
 // Check that BacklightController reinitializes itself correctly when the
 // backlight device changes (i.e. a new monitor is connected).
 TEST_F(BacklightControllerTest, ChangeBacklightDevice) {
   ASSERT_TRUE(controller_.SetPowerState(BACKLIGHT_ACTIVE));
+#ifndef IS_DESKTOP
   ASSERT_TRUE(controller_.OnPlugEvent(false));
+#endif // !defined (IS_DESKTOP)
+
   for (int i = 0; i < kStepsToHitLimit; ++i)
     controller_.IncreaseBrightness(BRIGHTNESS_CHANGE_USER_INITIATED);
   EXPECT_DOUBLE_EQ(100.0, controller_.target_percent());
@@ -405,7 +444,9 @@ TEST_F(BacklightControllerTest, ChangeBacklightDevice) {
 // non-linear mapping when a large range is exposed.
 TEST_F(BacklightControllerTest, NonLinearMapping) {
   ASSERT_TRUE(controller_.SetPowerState(BACKLIGHT_ACTIVE));
+#ifndef IS_DESKTOP
   ASSERT_TRUE(controller_.OnPlugEvent(false));
+#endif // !defined (IS_DESKTOP)
 
   // Update the backlight to expose a tiny range of levels.  There should be a
   // linear mapping between levels and percentages.
