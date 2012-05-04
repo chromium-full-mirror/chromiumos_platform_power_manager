@@ -255,6 +255,8 @@ bool BacklightController::SetPowerState(PowerState new_state) {
       (old_state == BACKLIGHT_IDLE_OFF ||
        (old_state == BACKLIGHT_SUSPENDED && suspended_through_idle_off_))) {
     monitor_reconfigure_->SetScreenOn();
+  } else if (state_ == BACKLIGHT_SUSPENDED) {
+    suspended_through_idle_off_ = (old_state == BACKLIGHT_IDLE_OFF);
   }
   return true;
 #endif
