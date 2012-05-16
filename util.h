@@ -22,6 +22,12 @@ void RemoveStatusFile(const FilePath& file);
 // Get the current wakeup count from sysfs
 bool GetWakeupCount(unsigned int *value);
 
+// Read an unsigned int from a file.  Return true on success
+// Due to crbug.com/128596 this function does not handle negative values
+// in the file well.  They are read in as signed values and then cast
+// to unsigned ints.  So -10 => 4294967286
+bool GetUintFromFile(const char* filename, unsigned int* value);
+
 }  // namespace util
 }  // namespace power_manager
 
