@@ -326,7 +326,8 @@ TEST_F(DaemonTest, ExtendTimeoutsWhenProjecting) {
   prefs_.SetInt64(kLockMsPref, kLockTimeMs);
 
   // Check that the settings are loaded correctly.
-  daemon_.is_projecting_ = false;
+  EXPECT_CALL(monitor_reconfigure_, is_projecting())
+      .WillRepeatedly(Return(false));
   daemon_.ReadSettings();
   EXPECT_EQ(kPluggedDimTimeMs, daemon_.plugged_dim_ms_);
   EXPECT_EQ(kPluggedOffTimeMs, daemon_.plugged_off_ms_);
@@ -337,7 +338,8 @@ TEST_F(DaemonTest, ExtendTimeoutsWhenProjecting) {
   EXPECT_EQ(kLockTimeMs, daemon_.default_lock_ms_);
 
   // When we start projecting, all of the timeouts should be increased.
-  daemon_.is_projecting_ = true;
+  EXPECT_CALL(monitor_reconfigure_, is_projecting())
+      .WillRepeatedly(Return(true));
   daemon_.AdjustIdleTimeoutsForProjection();
   EXPECT_GT(daemon_.plugged_dim_ms_, kPluggedDimTimeMs);
   EXPECT_GT(daemon_.plugged_off_ms_, kPluggedOffTimeMs);
@@ -352,7 +354,8 @@ TEST_F(DaemonTest, ExtendTimeoutsWhenProjecting) {
   EXPECT_GT(daemon_.default_lock_ms_, daemon_.plugged_off_ms_);
 
   // Stop projecting and check that we go back to the previous values.
-  daemon_.is_projecting_ = false;
+  EXPECT_CALL(monitor_reconfigure_, is_projecting())
+      .WillRepeatedly(Return(false));
   daemon_.AdjustIdleTimeoutsForProjection();
   EXPECT_EQ(kPluggedDimTimeMs, daemon_.plugged_dim_ms_);
   EXPECT_EQ(kPluggedOffTimeMs, daemon_.plugged_off_ms_);
