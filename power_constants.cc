@@ -40,6 +40,13 @@ const char kSampleWindowMaxPref[] = "sample_window_max";
 const char kSampleWindowMinPref[] = "sample_window_min";
 const char kTaperTimeMaxPref[] = "taper_time_max_s";
 const char kTaperTimeMinPref[] = "taper_time_min_s";
+const char kKeyboardBacklightDimPercentPref[] =
+    "keyboard_backlight_dim_percent";
+const char kKeyboardBacklightMaxPercentPref[] =
+    "keyboard_backlight_max_percent";
+const char kKeyboardBacklightMinPercentPref[] =
+    "keyboard_backlight_min_percent";
+const char kKeyboardBacklightStepsPref[] = "keyboard_backlight_steps";
 
 const char kBacklightPath[] = "/sys/class/backlight";
 const char kBacklightPattern[] = "*";
