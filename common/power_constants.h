@@ -66,6 +66,7 @@ extern const char kSuspendSignal[];
 extern const char kShutdownSignal[];
 extern const char kBacklightGetMethod[];
 extern const char kBacklightSetMethod[];
+extern const char kResumeBacklightSetMethod[];
 
 // powerm -> powerd constants.
 extern const char kExternalBacklightUpdateSignal[];

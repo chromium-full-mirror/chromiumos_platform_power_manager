@@ -30,6 +30,7 @@ class BacklightClient : public BacklightInterface {
   virtual bool GetMaxBrightnessLevel(int64* max_level);
   virtual bool GetCurrentBrightnessLevel(int64* current_level);
   virtual bool SetBrightnessLevel(int64 level, base::TimeDelta interval);
+  virtual bool SetResumeBrightnessLevel(int64 level);
 
  private:
   bool GetActualBrightness(int64* level, int64* max);

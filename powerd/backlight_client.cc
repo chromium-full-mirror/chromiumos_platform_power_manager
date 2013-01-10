@@ -71,6 +71,31 @@ bool BacklightClient::SetBrightnessLevel(int64 level,
   return true;
 }
 
+bool BacklightClient::SetResumeBrightnessLevel(int64 level) {
+  if (level > max_level_ || level < 0) {
+    LOG(ERROR) << "SetResumeBrightness level " << level << " is invalid.";
+    return false;
+  }
+
+  DBusMessage* message = dbus_message_new_method_call(
+      kRootPowerManagerServiceName,
+      kPowerManagerServicePath,
+      kRootPowerManagerInterface,
+      kResumeBacklightSetMethod);
+  CHECK(message);
+  dbus_message_append_args(message,
+                           DBUS_TYPE_INT32, &type_,
+                           DBUS_TYPE_INT64, &level,
+                           DBUS_TYPE_INVALID);
+  DBusConnection* connection = dbus_g_connection_get_connection(
+      chromeos::dbus::GetSystemBusConnection().g_connection());
+  if (dbus_connection_send(connection, message, NULL) == FALSE) {
+    LOG(WARNING) << "Error sending " << kResumeBacklightSetMethod << " method call.";
+    return false;
+  }
+  return true;
+}
+
 bool BacklightClient::GetActualBrightness(int64* level,
                                           int64* max_level) {
   CHECK(level);

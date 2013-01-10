@@ -392,6 +392,30 @@ DBusMessage* PowerManDaemon::HandleBacklightSetMethod(DBusMessage* message) {
   return NULL;
 }
 
+DBusMessage* PowerManDaemon::HandleResumeBacklightSetMethod(DBusMessage* message) {
+  BacklightType type = BACKLIGHT_TYPE_DISPLAY;
+  int64 level = 0;
+  DBusError error;
+  dbus_error_init(&error);
+  if (!dbus_message_get_args(message, &error,
+                             DBUS_TYPE_INT32, &type,
+                             DBUS_TYPE_INT64, &level,
+                             DBUS_TYPE_INVALID)) {
+    LOG(WARNING) << "Unable to read " << kResumeBacklightSetMethod << " args";
+    dbus_error_free(&error);
+    return NULL;
+  }
+
+  BacklightInterface* backlight = GetBacklight(type);
+  if (backlight) {
+    backlight->SetResumeBrightnessLevel(level);
+  } else {
+    LOG(WARNING) << "Ignoring " << kResumeBacklightSetMethod << " request for "
+                 << "nonexistent backlight of type " << type;
+  }
+  return NULL;
+}
+
 void PowerManDaemon::DBusNameOwnerChangedHandler(
     DBusGProxy*, const gchar* name, const gchar* old_owner,
     const gchar* new_owner, void* data) {
@@ -481,6 +505,11 @@ void PowerManDaemon::RegisterDBusMessageHandler() {
       kRootPowerManagerInterface,
       kBacklightSetMethod,
       base::Bind(&PowerManDaemon::HandleBacklightSetMethod,
+                 base::Unretained(this)));
+  dbus_handler_.AddDBusMethodHandler(
+      kRootPowerManagerInterface,
+      kResumeBacklightSetMethod,
+      base::Bind(&PowerManDaemon::HandleResumeBacklightSetMethod,
                  base::Unretained(this)));
 
   dbus_handler_.Start();

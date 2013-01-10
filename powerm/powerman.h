@@ -91,6 +91,7 @@ class PowerManDaemon {
   bool HandleSessionManagerStateChangedSignal(DBusMessage* message);
   DBusMessage* HandleBacklightGetMethod(DBusMessage* message);
   DBusMessage* HandleBacklightSetMethod(DBusMessage* message);
+  DBusMessage* HandleResumeBacklightSetMethod(DBusMessage* message);
 
   bool CancelDBusRequest();
 
