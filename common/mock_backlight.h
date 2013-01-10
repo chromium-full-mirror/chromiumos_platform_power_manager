@@ -57,6 +57,13 @@ class MockBacklight : public BacklightInterface {
                 .WillOnce(Return(ret_val))
                 .RetiresOnSaturation();
   }
+
+  MOCK_METHOD1(SetResumeBrightnessLevel, bool(int64 level));
+  void ExpectSetResumeBrightnessLevel(int64 level) {
+    EXPECT_CALL(*this, SetResumeBrightnessLevel(level))
+                .WillRepeatedly(Return(true));
+  }
+
 };  // class MockBacklight
 
 }  // namespace power_manager
