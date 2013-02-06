@@ -1677,10 +1677,10 @@ void Daemon::Suspend() {
   }
   if (util::IsSessionStarted()) {
     power_supply_.SetSuspendState(true);
+    suspender_.RequestSuspend();
     // When going to suspend, notify the backlight controller so it will know to
     // set the backlight correctly upon resume.
     SetPowerState(BACKLIGHT_SUSPENDED);
-    suspender_.RequestSuspend();
   } else {
     if (backlight_controller_->GetPowerState() == BACKLIGHT_SUSPENDED)
       shutdown_reason_ = kShutdownReasonIdle;

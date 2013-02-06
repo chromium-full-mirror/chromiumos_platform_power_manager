@@ -66,11 +66,6 @@ class TestBacklight : public BacklightInterface {
     return true;
   }
 
-  virtual bool SetResumeBrightnessLevel(int64 level) {
-    NOTIMPLEMENTED();
-    return false;
-  }
-
  private:
   // Maximum backlight level.
   int64 max_level_;
