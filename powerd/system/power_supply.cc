@@ -34,7 +34,7 @@ const base::TimeDelta kHysteresisTime = base::TimeDelta::FromMinutes(3);
 
 // Report batteries as full if they're at or above this level (out of a max of
 // 1.0).
-const double kDefaultFullFactor = 0.98;
+const double kDefaultFullFactor = 0.97;
 
 // Default time interval between polls, in milliseconds.
 const int kDefaultPollMs = 30000;
@@ -120,8 +120,6 @@ bool PowerSupply::TestApi::TriggerPollTimeout() {
 
 const int PowerSupply::kCalculateBatterySlackMs = 50;
 
-const int PowerSupply::kRetainFullChargeSec = 60;
-
 PowerSupply::PowerSupply(const base::FilePath& power_supply_path,
                          PrefsInterface* prefs)
     : prefs_(prefs),
@@ -129,7 +127,6 @@ PowerSupply::PowerSupply(const base::FilePath& power_supply_path,
       acceptable_variance_(kAcceptableVariance),
       hysteresis_time_(kHysteresisTimeFast),
       found_acceptable_time_range_(false),
-      full_battery_percent_(100.0),
       sample_window_max_(10),
       sample_window_min_(1),
       taper_time_max_(base::TimeDelta::FromSeconds(3600)),
@@ -282,7 +279,6 @@ void PowerSupply::SetSuspended(bool suspended) {
   } else {
     // base::TimeTicks::Now() doesn't increase while the system is
     // suspended; ensure that a stale timestamp isn't used.
-    last_fully_charged_line_power_time_ = base::TimeTicks();
     time_to_empty_average_.Clear();
     time_to_full_average_.Clear();
     // If resuming, deduct the time suspended from the hysteresis state
@@ -440,9 +436,14 @@ bool PowerSupply::UpdatePowerStatus() {
     LOG(WARNING) << "No charge/energy readings for battery";
     return false;
   }
+
   status.battery_charge_full = battery_charge_full;
   status.battery_charge_full_design = battery_charge_full_design;
   status.battery_charge = battery_charge;
+  if (status.battery_charge_full <= 0.0) {
+    LOG(WARNING) << "Got battery-full charge of " << status.battery_charge_full;
+    return false;
+  }
 
   // Sometimes current could be negative.  Ignore it and use |line_power_on| to
   // determine whether it's charging or discharging.
@@ -464,16 +465,14 @@ bool PowerSupply::UpdatePowerStatus() {
   else if (discharge_start_time_.is_null())
     discharge_start_time_ = GetCurrentTime();
 
-  if (battery_charge_full > 0 && battery_charge_full_design > 0) {
-    status.battery_percentage =
-        std::min(100., 100. * battery_charge / battery_charge_full);
-  } else {
-    status.battery_percentage = -1;
-  }
+  status.battery_percentage = util::ClampPercent(
+      100.0 * battery_charge / battery_charge_full);
+  status.display_battery_percentage = util::ClampPercent(
+      100.0 * (status.battery_percentage - low_battery_shutdown_percent_) /
+      (100.0 * full_factor_ - low_battery_shutdown_percent_));
 
-  const bool battery_is_full = battery_charge >= battery_charge_full ||
-      (battery_charge >= battery_charge_full * full_factor_ &&
-       battery_current <= kEpsilon);
+  const bool battery_is_full =
+      battery_charge >= battery_charge_full * full_factor_;
 
   // Determine battery state from above readings.  Disregard the "status" field
   // in sysfs, as that can be inconsistent with the numerical readings.
@@ -493,17 +492,9 @@ bool PowerSupply::UpdatePowerStatus() {
     status.battery_state = PowerSupplyProperties_BatteryState_DISCHARGING;
   }
 
-  if (status.line_power_on && battery_is_full)
-    last_fully_charged_line_power_time_ = GetCurrentTime();
-
-  if (!last_fully_charged_line_power_time_.is_null() &&
-      (GetCurrentTime() - last_fully_charged_line_power_time_).InSeconds() <=
-      kRetainFullChargeSec)
-    full_battery_percent_ = status.battery_percentage;
-
-  status.display_battery_percentage = std::max(0.0, std::min(100.0,
-      (status.battery_percentage - low_battery_shutdown_percent_) /
-      (full_battery_percent_ - low_battery_shutdown_percent_) * 100.0));
+  status.is_calculating_battery_time =
+      !done_calculating_battery_time_timestamp_.is_null() &&
+      GetCurrentTime() < done_calculating_battery_time_timestamp_;
 
   UpdateRemainingTime(&status);
   UpdateAveragedTimes(&status);
