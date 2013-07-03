@@ -631,9 +631,14 @@ void Daemon::OnPowerStatusUpdate(const system::PowerStatus& status) {
     if (rounded_actual != rounded_display)
       percent_str += StringPrintf(" (displayed as %ld%%)", rounded_display);
     if (status.line_power_on) {
-       LOG(INFO) << "On AC (" << status.line_power_type << ") with battery at "
-                 << percent_str << "; " << status.battery_time_to_full
-                 << " sec until full";
+      std::string line_details;
+      if (status.line_power_current || status.line_power_voltage) {
+        line_details = StringPrintf(", %.3fA at %.1fV",
+            status.line_power_current, status.line_power_voltage);
+      }
+      LOG(INFO) << "On AC (" << status.line_power_type << line_details
+                << ") with battery at " << percent_str << "; "
+                << status.battery_time_to_full << " sec until full";
     } else {
       LOG(INFO) << "On battery at " << percent_str << "; "
                 << status.battery_time_to_empty << " sec until empty";

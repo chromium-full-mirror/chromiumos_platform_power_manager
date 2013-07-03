@@ -125,6 +125,9 @@ int main(int argc, char** argv) {
   display.PrintStringValue("online",
                            BoolToString(power_status.line_power_on));
   display.PrintStringValue("type", power_status.line_power_type);
+  display.PrintValue("voltage (V)", power_status.line_power_voltage);
+  display.PrintValue("current (A)", power_status.line_power_current);
+
   if (power_status.battery_is_present) {
     display.SetIndent(0, 0);
     display.PrintString("Device: Battery");
