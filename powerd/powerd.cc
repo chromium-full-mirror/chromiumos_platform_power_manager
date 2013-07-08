@@ -1148,6 +1148,8 @@ void Daemon::OnSessionStateChange(const std::string& state_str) {
     state_controller_->HandleSessionStateChange(state);
   if (backlight_controller_)
     backlight_controller_->HandleSessionStateChange(state);
+  if (keyboard_controller_)
+    keyboard_controller_->HandleSessionStateChange(state);
 }
 
 void Daemon::Shutdown() {
