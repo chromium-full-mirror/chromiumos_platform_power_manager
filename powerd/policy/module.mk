@@ -20,6 +20,7 @@ CXX_STATIC_LIBRARY(powerd/libpolicy.pie.a): \
 clean: CLEAN(powerd/libpolicy.pie.a)
 
 CXX_STATIC_LIBRARY(powerd/libpolicy_test.pie.a): \
+	powerd/policy/backlight_controller_observer_stub.o \
 	powerd/policy/backlight_controller_stub.o
 clean: CLEAN(powerd/libpolicy_test.pie.a)
 
